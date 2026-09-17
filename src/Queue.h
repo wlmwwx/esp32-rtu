@@ -29,9 +29,7 @@ struct ConfigData {
 // Queue handles (defined in main.cpp, extern here)
 extern QueueHandle_t modbus_data_queue;
 extern QueueHandle_t cmd_queue;
-extern QueueHandle_t web_config_queue;
 
 // Queue lengths
 #define MODBUS_QUEUE_LEN   5
 #define CMD_QUEUE_LEN      4
-#define CONFIG_QUEUE_LEN   2

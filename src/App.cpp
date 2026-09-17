@@ -1,6 +1,7 @@
 #include "App.hpp"
 #include "Queue.h"
 #include "Config.hpp"
+#include "StatusLED.hpp"
 #include <esp_timer.h>
 
 extern QueueHandle_t cmd_queue;
@@ -31,6 +32,9 @@ void AppTask(void* param) {
     }
 
     while (true) {
+        StatusLED::tick();
+        vTaskDelay(pdMS_TO_TICKS(10));
+
         Cmd cmd;
         if (xQueueReceive(cmd_queue, &cmd, pdMS_TO_TICKS(1000)) == pdTRUE) {
             switch (cmd) {

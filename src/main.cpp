@@ -8,12 +8,12 @@
 #include "Modbus.hpp"
 #include "Network.hpp"
 #include "WebConfig.hpp"
+#include "StatusLED.hpp"
 #include "App.hpp"
 
 // Queue handles (defined here, extern in Queue.h)
 QueueHandle_t modbus_data_queue = nullptr;
 QueueHandle_t cmd_queue = nullptr;
-QueueHandle_t web_config_queue = nullptr;
 
 // Task handles
 static TaskHandle_t s_button_task_h = nullptr;
@@ -38,7 +38,8 @@ void setup() {
     // Create queues
     modbus_data_queue = xQueueCreate(MODBUS_QUEUE_LEN, sizeof(ModbusData));
     cmd_queue = xQueueCreate(CMD_QUEUE_LEN, sizeof(Cmd));
-    web_config_queue = xQueueCreate(CONFIG_QUEUE_LEN, sizeof(ConfigData));
+
+    StatusLED::begin();
 
     if (!isConfigured) {
         // No config — enter CONFIG mode (AP)
