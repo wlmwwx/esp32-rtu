@@ -11,12 +11,34 @@ extern QueueHandle_t modbus_data_queue;
 extern QueueHandle_t cmd_queue;
 
 // MQTT client instance
-static WiFiClient _wifiClient;
 static PubSubClient* _mqttClient = nullptr;
+
+static String build_json_payload(ModbusData& data, Config& cfg) {
+    char json[512];
+    snprintf(json, sizeof(json),
+        "{\"device_id\":\"%s\",\"timestamp\":%lu,\"registers\":[",
+        String((uint32_t)ESP.getEfuseMac(), HEX).c_str(),
+        data.timestamp);
+    for (int i = 0; i < data.count; i++) {
+        if (i > 0) strcat(json, ",");
+        char reg[32];
+        snprintf(reg, sizeof(reg), "{\"addr\":%d,\"value\":%d}", i + cfg.getModbusReg(), data.registers[i]);
+        strcat(json, reg);
+    }
+    strcat(json, "]}");
+    return String(json);
+}
 
 static bool mqtt_connect(Config& cfg) {
     if (!_mqttClient) {
-        _mqttClient = new PubSubClient(_wifiClient);
+        WiFiClient* client;
+        if (cfg.getMqttTls()) {
+            client = new WiFiClientSecure();
+            ((WiFiClientSecure*)client)->setInsecure();
+        } else {
+            client = new WiFiClient();
+        }
+        _mqttClient = new PubSubClient(*client);
     }
     _mqttClient->setServer(cfg.getMqttBroker().c_str(), cfg.getMqttPort());
 
@@ -41,22 +63,8 @@ static bool mqtt_publish(ModbusData& data, Config& cfg) {
         if (!mqtt_connect(cfg)) return false;
     }
 
-    // Build JSON payload
-    char json[512];
-    snprintf(json, sizeof(json),
-        "{\"device_id\":\"%s\",\"timestamp\":%lu,\"registers\":[",
-        String((uint32_t)ESP.getEfuseMac(), HEX).c_str(),
-        data.timestamp);
-
-    for (int i = 0; i < data.count; i++) {
-        if (i > 0) strcat(json, ",");
-        char reg[64];
-        snprintf(reg, sizeof(reg), "{\"addr\":%d,\"value\":%d}", i + cfg.getModbusReg(), data.registers[i]);
-        strcat(json, reg);
-    }
-    strcat(json, "]}");
-
-    return _mqttClient->publish(cfg.getMqttTopic().c_str(), json, cfg.getMqttRetain(), cfg.getMqttQos());
+    String payload = build_json_payload(data, cfg);
+    return _mqttClient->publish(cfg.getMqttTopic().c_str(), payload.c_str(), cfg.getMqttRetain(), cfg.getMqttQos());
 }
 
 static bool http_post(ModbusData& data, Config& cfg) {
@@ -67,21 +75,8 @@ static bool http_post(ModbusData& data, Config& cfg) {
     http.begin(client, cfg.getHttpUrl());
     http.addHeader("Content-Type", "application/json");
 
-    char json[512];
-    snprintf(json, sizeof(json),
-        "{\"device_id\":\"%s\",\"timestamp\":%lu,\"registers\":[",
-        String((uint32_t)ESP.getEfuseMac(), HEX).c_str(),
-        data.timestamp);
-
-    for (int i = 0; i < data.count; i++) {
-        if (i > 0) strcat(json, ",");
-        char reg[64];
-        snprintf(reg, sizeof(reg), "{\"addr\":%d,\"value\":%d}", i + cfg.getModbusReg(), data.registers[i]);
-        strcat(json, reg);
-    }
-    strcat(json, "]}");
-
-    int code = http.POST((uint8_t*)json, strlen(json));
+    String payload = build_json_payload(data, cfg);
+    int code = http.POST((uint8_t*)payload.c_str(), payload.length());
     http.end();
     return code >= 200 && code < 300;
 }
@@ -92,21 +87,8 @@ static bool tcp_send(ModbusData& data, Config& cfg) {
     WiFiClient client;
     if (!client.connect(cfg.getTcpIp().c_str(), cfg.getTcpPort())) return false;
 
-    char json[512];
-    snprintf(json, sizeof(json),
-        "{\"device_id\":\"%s\",\"timestamp\":%lu,\"registers\":[",
-        String((uint32_t)ESP.getEfuseMac(), HEX).c_str(),
-        data.timestamp);
-
-    for (int i = 0; i < data.count; i++) {
-        if (i > 0) strcat(json, ",");
-        char reg[64];
-        snprintf(reg, sizeof(reg), "{\"addr\":%d,\"value\":%d}", i + cfg.getModbusReg(), data.registers[i]);
-        strcat(json, reg);
-    }
-    strcat(json, "]}");
-
-    client.print(json);
+    String payload = build_json_payload(data, cfg);
+    client.print(payload.c_str());
     client.stop();
     return true;
 }
