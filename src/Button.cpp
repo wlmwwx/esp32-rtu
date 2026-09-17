@@ -4,9 +4,9 @@
 #include <esp_timer.h>
 
 static constexpr gpio_num_t BUTTON_GPIO = GPIO_NUM_9;
-static constexpr uint32_t LONG_PRESS_US = 3'000'000;  // 3 seconds
-static constexpr uint32_t SHORT_PRESS_US = 1'000'000; // 1 second
-static constexpr uint32_t DEBOUNCE_US = 50'000;       // 50ms debounce
+static constexpr uint32_t LONG_PRESS_US = 3000000;  // 3 seconds
+static constexpr uint32_t SHORT_PRESS_US = 1000000; // 1 second
+static constexpr uint32_t DEBOUNCE_US = 50000;       // 50ms debounce
 
 extern QueueHandle_t cmd_queue;
 

@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
+#include <WiFi.h>
 #include "Queue.h"
 #include "Config.hpp"
 #include "Button.hpp"

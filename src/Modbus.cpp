@@ -90,7 +90,7 @@ void ModbusTask(void* param) {
                 // Send request
                 rs485_set_tx();
                 uart_write_bytes(MODBUS_UART, (const char*)req, 8);
-                uart_tx_wait_idle(MODBUS_UART);
+                uart_wait_tx_done(MODBUS_UART, 100);
                 rs485_set_rx();
 
                 // Wait for response

@@ -72,7 +72,7 @@ static bool mqtt_publish(ModbusData& data, Config& cfg) {
     }
 
     String payload = build_json_payload(data, cfg);
-    return _mqttClient->publish(cfg.getMqttTopic().c_str(), payload.c_str(), cfg.getMqttRetain(), cfg.getMqttQos());
+    return _mqttClient->publish(cfg.getMqttTopic().c_str(), (const uint8_t*)payload.c_str(), payload.length(), cfg.getMqttRetain());
 }
 
 static bool http_post(ModbusData& data, Config& cfg) {
