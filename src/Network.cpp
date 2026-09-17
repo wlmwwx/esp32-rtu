@@ -11,6 +11,7 @@ extern QueueHandle_t modbus_data_queue;
 extern QueueHandle_t cmd_queue;
 
 // MQTT client instance
+static WiFiClient* _wifiClient = nullptr;
 static PubSubClient* _mqttClient = nullptr;
 
 static String build_json_payload(ModbusData& data, Config& cfg) {
@@ -30,16 +31,23 @@ static String build_json_payload(ModbusData& data, Config& cfg) {
 }
 
 static bool mqtt_connect(Config& cfg) {
-    if (!_mqttClient) {
-        WiFiClient* client;
-        if (cfg.getMqttTls()) {
-            client = new WiFiClientSecure();
-            ((WiFiClientSecure*)client)->setInsecure();
-        } else {
-            client = new WiFiClient();
-        }
-        _mqttClient = new PubSubClient(*client);
+    // Fix memory leak: delete old clients before allocating new ones
+    if (_mqttClient) {
+        delete _mqttClient;
+        _mqttClient = nullptr;
     }
+    if (_wifiClient) {
+        delete _wifiClient;
+        _wifiClient = nullptr;
+    }
+
+    if (cfg.getMqttTls()) {
+        _wifiClient = new WiFiClientSecure();
+        ((WiFiClientSecure*)_wifiClient)->setInsecure();
+    } else {
+        _wifiClient = new WiFiClient();
+    }
+    _mqttClient = new PubSubClient(*_wifiClient);
     _mqttClient->setServer(cfg.getMqttBroker().c_str(), cfg.getMqttPort());
 
     String clientId = "ESP32-RTU-" + String((uint32_t)ESP.getEfuseMac(), HEX);
