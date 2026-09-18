@@ -88,3 +88,16 @@ void Config::setRunMode(const String& val) { _prefs.putString("run_mode", val); 
 
 int Config::getPushInterval() { return _prefs.getInt("push_interval", 30); }
 void Config::setPushInterval(int val) { _prefs.putInt("push_interval", val); }
+
+bool Config::getGatewayEnable() {
+    return _prefs.getBool("gateway_enable", false);
+}
+void Config::setGatewayEnable(bool val) {
+    _prefs.putBool("gateway_enable", val);
+}
+int Config::getGatewayPort() {
+    return _prefs.getInt("gateway_port", 502);
+}
+void Config::setGatewayPort(int val) {
+    _prefs.putInt("gateway_port", val);
+}

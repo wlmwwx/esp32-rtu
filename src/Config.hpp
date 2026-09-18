@@ -69,6 +69,12 @@ public:
     int getPushInterval();
     void setPushInterval(int val);
 
+    // Gateway
+    bool getGatewayEnable();
+    void setGatewayEnable(bool val);
+    int getGatewayPort();
+    void setGatewayPort(int val);
+
     // Utility
     bool isConfigured();  // true if wifi_ssid is non-empty
 
