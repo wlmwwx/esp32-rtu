@@ -11,91 +11,83 @@ static AsyncWebServer* _server = nullptr;
 extern QueueHandle_t cmd_queue;
 
 static const char HTML_FORM[] = R"(
-<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>
-<title>ESP32 RTU Config</title><style>
-body{font-family:Arial;max-width:600px;margin:0 auto;padding:20px}
-input,select{width:100%;padding:8px;margin:5px 0}
-h2{color:#333;border-bottom:1px solid #ccc;padding-bottom:5px}
-button{background:#4CAF50;color:white;padding:10px 20px;border:none;cursor:pointer;width:100%}
+<!DOCTYPE html>
+<html>
+<head>
+<meta name='viewport' content='width=device-width,initial-scale=1'>
+<title>ESP32 RTU Config</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:Arial,sans-serif;max-width:700px;margin:0 auto;padding:15px;background:#f5f5f5}
+h1{text-align:center;color:#333}
+h2{color:#555;border-bottom:1px solid #ddd;padding-bottom:5px;margin-top:20px;font-size:13px;text-transform:uppercase;letter-spacing:1px;background:#eee;padding:5px 8px;border-radius:4px}
+.row{display:flex;align-items:center;gap:10px;margin:5px 0;flex-wrap:wrap}
+label{min-width:130px;color:#444;font-size:13px;font-weight:500}
+input,select{padding:6px 8px;border:1px solid #ccc;border-radius:4px;flex:1;min-width:120px}
+input[type=checkbox]{width:auto;flex:none}
+input[type=number]{width:90px;flex:none}
+button{background:#4CAF50;color:white;padding:12px 20px;border:none;border-radius:6px;cursor:pointer;width:100%;font-size:15px;margin-top:15px}
 button:hover{background:#45a049}
-.note{font-size:12px;color:#666}
-</style></head>
+button.reset{background:#f44336;margin-top:8px}
+.info{font-size:12px;color:#888;text-align:center;margin-top:15px}
+.section{margin-top:10px}
+</style>
+</head>
 <body>
 <h1>ESP32 RTU Configuration</h1>
 <form action='/save' method='POST'>
 
 <h2>WiFi</h2>
-<input name='wifi_ssid' placeholder='SSID' value='{wifi_ssid}'>
-<input name='wifi_pass' type='password' placeholder='Password' value='{wifi_pass}'>
+<div class='row'><label>SSID:</label><input name='wifi_ssid' value='{wifi_ssid}'></div>
+<div class='row'><label>Password:</label><input name='wifi_pass' type='password' value='{wifi_pass}'></div>
 
 <h2>MQTT</h2>
-<input name='mqtt_broker' placeholder='Broker' value='{mqtt_broker}'>
-<input name='mqtt_port' type='number' placeholder='Port' value='{mqtt_port}'>
-<input name='mqtt_user' placeholder='Username' value='{mqtt_user}'>
-<input name='mqtt_pass' type='password' placeholder='Password' value='{mqtt_pass}'>
-<input name='mqtt_topic' placeholder='Topic' value='{mqtt_topic}'>
-<div><label><input name='mqtt_tls' type='checkbox' {mqtt_tls}> TLS/SSL</label></div>
-<div>QoS: <select name='mqtt_qos'>
-<option value='0' {qos0}>QoS 0</option>
-<option value='1' {qos1}>QoS 1</option>
-</select></div>
-<input name='mqtt_lwt_topic' placeholder='LWT Topic' value='{mqtt_lwt_topic}'>
-<input name='mqtt_lwt_msg' placeholder='LWT Message' value='{mqtt_lwt_msg}'>
-<div><label><input name='mqtt_retain' type='checkbox' {mqtt_retain}> Retain</label></div>
+<div class='row'><label>Broker:</label><input name='mqtt_broker' value='{mqtt_broker}'></div>
+<div class='row'><label>Port:</label><input name='mqtt_port' type='number' value='{mqtt_port}'></div>
+<div class='row'><label>Username:</label><input name='mqtt_user' value='{mqtt_user}'></div>
+<div class='row'><label>Password:</label><input name='mqtt_pass' type='password' value='{mqtt_pass}'></div>
+<div class='row'><label>Topic:</label><input name='mqtt_topic' value='{mqtt_topic}'></div>
+<div class='row'><label>Use TLS:</label><input name='mqtt_tls' type='checkbox' {mqtt_tls}></div>
+<div class='row'><label>QoS:</label><select name='mqtt_qos'><option value='0' {qos0}>0</option><option value='1' {qos1}>1</option></select></div>
+<div class='row'><label>LWT Topic:</label><input name='mqtt_lwt_topic' value='{mqtt_lwt_topic}'></div>
+<div class='row'><label>LWT Msg:</label><input name='mqtt_lwt_msg' value='{mqtt_lwt_msg}'></div>
+<div class='row'><label>Retain:</label><input name='mqtt_retain' type='checkbox' {mqtt_retain}></div>
 
 <h2>HTTP</h2>
-<input name='http_url' placeholder='http://server/path' value='{http_url}'>
+<div class='row'><label>URL:</label><input name='http_url' value='{http_url}'></div>
 
 <h2>TCP</h2>
-<input name='tcp_ip' placeholder='Server IP' value='{tcp_ip}'>
-<input name='tcp_port' type='number' placeholder='Port' value='{tcp_port}'>
+<div class='row'><label>Server IP:</label><input name='tcp_ip' value='{tcp_ip}'></div>
+<div class='row'><label>Port:</label><input name='tcp_port' type='number' value='{tcp_port}'></div>
 
 <h2>Modbus</h2>
-<input name='modbus_baud' type='number' placeholder='Baud Rate' value='{modbus_baud}'>
-<div>Baud:
-<select name='modbus_bits'>
-<option value='8' {bits8}>8</option>
-<option value='7' {bits7}>7</option>
-</select></div>
-<div>Parity:
-<select name='modbus_parity'>
-<option value='0' {par0}>None</option>
-<option value='1' {par1}>Odd</option>
-<option value='2' {par2}>Even</option>
-</select></div>
-<input name='modbus_stop' type='number' placeholder='Stop Bits' value='{modbus_stop}'>
-<input name='modbus_slave' type='number' placeholder='Slave Address' value='{modbus_slave}'>
-<input name='modbus_reg' type='number' placeholder='Start Register' value='{modbus_reg}'>
-<input name='modbus_count' type='number' placeholder='Register Count' value='{modbus_count}'>
+<div class='row'><label>Baud Rate:</label><input name='modbus_baud' type='number' value='{modbus_baud}'></div>
+<div class='row'><label>Data Bits:</label><select name='modbus_bits'><option value='8' {bits8}>8</option><option value='7' {bits7}>7</option></select></div>
+<div class='row'><label>Parity:</label><select name='modbus_parity'><option value='0' {par0}>None</option><option value='1' {par1}>Odd</option><option value='2' {par2}>Even</option></select></div>
+<div class='row'><label>Stop Bits:</label><input name='modbus_stop' type='number' value='{modbus_stop}'></div>
+<div class='row'><label>Slave Addr:</label><input name='modbus_slave' type='number' value='{modbus_slave}'></div>
+<div class='row'><label>Start Reg:</label><input name='modbus_reg' type='number' value='{modbus_reg}'></div>
+<div class='row'><label>Count:</label><input name='modbus_count' type='number' value='{modbus_count}'></div>
 
 <h2>Mode</h2>
-<div>Protocol:
-<select name='protocol_select'>
-<option value='mqtt' {proto_mqtt}>MQTT</option>
-<option value='http' {proto_http}>HTTP</option>
-<option value='tcp' {proto_tcp}>TCP</option>
-</select></div>
-<div>Mode:
-<select name='run_mode'>
-<option value='push' {mode_push}>Push</option>
-<option value='pull' {mode_pull}>Pull</option>
-</select></div>
-<input name='push_interval' type='number' placeholder='Push Interval (sec)' value='{push_interval}'>
+<div class='row'><label>Protocol:</label><select name='protocol_select'><option value='mqtt' {proto_mqtt}>MQTT</option><option value='http' {proto_http}>HTTP</option><option value='tcp' {proto_tcp}>TCP</option></select></div>
+<div class='row'><label>Run Mode:</label><select name='run_mode'><option value='push' {mode_push}>Push</option><option value='pull' {mode_pull}>Pull</option></select></div>
+<div class='row'><label>Push Interval(sec):</label><input name='push_interval' type='number' value='{push_interval}'></div>
 
 <button type='submit'>Save & Reboot</button>
 </form>
-<form action='/reset' method='POST' style='margin-top:10px'>
-<button type='submit' style='background:#f44336'>Factory Reset</button>
+<form action='/reset' method='POST'>
+<button type='submit' class='reset'>Factory Reset</button>
 </form>
-</body></html>
+<div class='info'>ESP32 RTU Gateway</div>
+</body>
+</html>
 )";
 
 static String build_response(Config& cfg) {
     String html = HTML_FORM;
-    // WiFi
     html.replace("{wifi_ssid}", cfg.getWifiSsid());
     html.replace("{wifi_pass}", cfg.getWifiPass());
-    // MQTT
     html.replace("{mqtt_broker}", cfg.getMqttBroker());
     html.replace("{mqtt_port}", String(cfg.getMqttPort()));
     html.replace("{mqtt_user}", cfg.getMqttUser());
@@ -107,12 +99,9 @@ static String build_response(Config& cfg) {
     html.replace("{mqtt_lwt_topic}", cfg.getMqttLwtTopic());
     html.replace("{mqtt_lwt_msg}", cfg.getMqttLwtMsg());
     html.replace("{mqtt_retain}", cfg.getMqttRetain() ? "checked" : "");
-    // HTTP
     html.replace("{http_url}", cfg.getHttpUrl());
-    // TCP
     html.replace("{tcp_ip}", cfg.getTcpIp());
     html.replace("{tcp_port}", String(cfg.getTcpPort()));
-    // Modbus
     html.replace("{modbus_baud}", String(cfg.getModbusBaud()));
     html.replace("{bits8}", cfg.getModbusBits() == 8 ? "selected" : "");
     html.replace("{bits7}", cfg.getModbusBits() == 7 ? "selected" : "");
@@ -123,7 +112,6 @@ static String build_response(Config& cfg) {
     html.replace("{modbus_slave}", String(cfg.getModbusSlave()));
     html.replace("{modbus_reg}", String(cfg.getModbusReg()));
     html.replace("{modbus_count}", String(cfg.getModbusCount()));
-    // Mode
     html.replace("{proto_mqtt}", cfg.getProtocolSelect() == "mqtt" ? "selected" : "");
     html.replace("{proto_http}", cfg.getProtocolSelect() == "http" ? "selected" : "");
     html.replace("{proto_tcp}", cfg.getProtocolSelect() == "tcp" ? "selected" : "");
@@ -134,9 +122,6 @@ static String build_response(Config& cfg) {
 }
 
 static void save_params(AsyncWebServerRequest* request, Config& cfg) {
-    // Extract and save all params
-    // Note: HTML form uses lowercase field names (wifi_ssid, mqtt_broker, etc.)
-    // but Config class uses capitalized setters (setWifiSsid, setMqttBroker, etc.)
     if (request->hasParam("wifi_ssid")) cfg.setWifiSsid(request->getParam("wifi_ssid")->value());
     if (request->hasParam("wifi_pass")) cfg.setWifiPass(request->getParam("wifi_pass")->value());
     if (request->hasParam("mqtt_broker")) cfg.setMqttBroker(request->getParam("mqtt_broker")->value());
@@ -168,7 +153,6 @@ void WebConfigTask(void* param) {
     Config cfg;
     cfg.begin();
 
-    // Start AP
     WiFi.mode(WIFI_AP);
     WiFi.softAP("ESP32-RTU-Config");
 
@@ -180,16 +164,16 @@ void WebConfigTask(void* param) {
 
     _server->on("/save", HTTP_POST, [&cfg](AsyncWebServerRequest* r) {
         save_params(r, cfg);
-        Cmd cmd = Cmd::CMD_RESTART;
-        xQueueSend(cmd_queue, &cmd, 0);
         r->send(200, "text/plain", "Saved. Rebooting...");
+        vTaskDelay(pdMS_TO_TICKS(500));
+        esp_restart();
     });
 
     _server->on("/reset", HTTP_POST, [&cfg](AsyncWebServerRequest* r) {
         cfg.reset();
-        Cmd cmd = Cmd::CMD_RESTART;
-        xQueueSend(cmd_queue, &cmd, 0);
         r->send(200, "text/plain", "Reset. Rebooting...");
+        vTaskDelay(pdMS_TO_TICKS(500));
+        esp_restart();
     });
 
     _server->on("/status", HTTP_GET, [](AsyncWebServerRequest* r) {
@@ -204,7 +188,6 @@ void WebConfigTask(void* param) {
     _server->begin();
     Serial.println("AP started at 192.168.4.1");
 
-    // Keep alive — scheduler already running, don't suspend
     while (true) {
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
