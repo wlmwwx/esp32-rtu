@@ -26,7 +26,7 @@ void AppTask(void* param) {
         s_push_timer = xTimerCreate(
             "push_timer",
             pdMS_TO_TICKS(pushInterval * 1000),
-            pdTRUE,            // auto-reload
+            pdTRUE,
             NULL,
             push_timer_callback
         );
@@ -46,7 +46,6 @@ void AppTask(void* param) {
                     esp_restart();
                     break;
                 case Cmd::CMD_SAVE_CONFIG:
-                    // Already handled by WebConfigTask
                     break;
                 default:
                     break;
