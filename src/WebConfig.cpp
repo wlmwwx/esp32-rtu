@@ -71,7 +71,13 @@ button.reset{background:#f44336;margin-top:8px}
 
 <h2>Mode</h2>
 <div class='row'><label>Protocol:</label><select name='protocol_select'><option value='mqtt' {proto_mqtt}>MQTT</option><option value='http' {proto_http}>HTTP</option><option value='tcp' {proto_tcp}>TCP</option></select></div>
-<div class='row'><label>Run Mode:</label><select name='run_mode'><option value='push' {mode_push}>Push</option><option value='pull' {mode_pull}>Pull</option></select></div>
+<div class='row'><label>Run Mode:</label>
+<select name='run_mode'>
+  <option value='push' {mode_push}>Push (MQTT/HTTP)</option>
+  <option value='pull'  {mode_pull}>Pull (MQTT/HTTP)</option>
+  <option value='gateway' {mode_gateway}>Gateway (TCP→RTU)</option>
+</select></div>
+<div class='row'><label>Gateway Port:</label><input name='gateway_port' type='number' value='{gateway_port}'></div>
 <div class='row'><label>Push Interval(sec):</label><input name='push_interval' type='number' value='{push_interval}'></div>
 
 <button type='submit'>Save & Reboot</button>
@@ -118,6 +124,8 @@ static String build_response(Config& cfg) {
     html.replace("{mode_push}", cfg.getRunMode() == "push" ? "selected" : "");
     html.replace("{mode_pull}", cfg.getRunMode() == "pull" ? "selected" : "");
     html.replace("{push_interval}", String(cfg.getPushInterval()));
+    html.replace("{mode_gateway}", cfg.getRunMode() == "gateway" ? "selected" : "");
+    html.replace("{gateway_port}", String(cfg.getGatewayPort()));
     return html;
 }
 
@@ -147,6 +155,7 @@ static void save_params(AsyncWebServerRequest* request, Config& cfg) {
     if (request->hasParam("protocol_select")) cfg.setProtocolSelect(request->getParam("protocol_select")->value());
     if (request->hasParam("run_mode")) cfg.setRunMode(request->getParam("run_mode")->value());
     if (request->hasParam("push_interval")) cfg.setPushInterval(request->getParam("push_interval")->value().toInt());
+    if (request->hasParam("gateway_port")) cfg.setGatewayPort(request->getParam("gateway_port")->value().toInt());
 }
 
 void WebConfigTask(void* param) {
