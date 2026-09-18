@@ -39,8 +39,6 @@ void setup() {
     modbus_data_queue = xQueueCreate(MODBUS_QUEUE_LEN, sizeof(ModbusData));
     cmd_queue = xQueueCreate(CMD_QUEUE_LEN, sizeof(Cmd));
 
-    StatusLED::begin();
-
     if (!isConfigured) {
         // No config — enter CONFIG mode (AP)
         Serial.println("No config found. Starting AP mode...");
