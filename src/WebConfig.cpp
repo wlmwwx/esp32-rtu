@@ -202,7 +202,10 @@ void WebConfigTask(void* param) {
     });
 
     _server->begin();
+    Serial.println("AP started at 192.168.4.1");
 
-    // Suspend until needed (controlled by AppTask)
-    vTaskSuspend(NULL);
+    // Keep alive — scheduler already running, don't suspend
+    while (true) {
+        delay(1000);
+    }
 }
