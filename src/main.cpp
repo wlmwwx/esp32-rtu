@@ -29,6 +29,13 @@ static void IRAM_ATTR button_isr(void* arg) {
 void setup() {
     Serial.begin(115200);
 
+    // Initialize esp_timer early — this forces ESP-IDF to claim the hardware
+    // systimer interrupt BEFORE FreeRTOS tries to allocate it in vTaskStartScheduler.
+    // On ESP32-C3 + Arduino + ESP-IDF 4.4, WiFiProv or esp_timer_init() in the
+    // Arduino core can race with FreeRTOS for ETS_SYSTIMER_TARGET0.
+    #include <esp_timer.h>
+    esp_timer_init();
+
     Config cfg;
     cfg.begin();
 
@@ -50,6 +57,7 @@ void setup() {
         vTaskResume(s_webconfig_task_h);
 
         // Nothing else runs in config mode — tasks suspend after init
+        Serial.println("Before scheduler...");
         vTaskStartScheduler();
     } else {
         // Configured — enter RUN mode
