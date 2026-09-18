@@ -10,6 +10,8 @@ static constexpr uint32_t MODBUS_TIMEOUT_MS = 1000;
 
 extern QueueHandle_t cmd_queue;
 extern QueueHandle_t modbus_data_queue;
+extern QueueHandle_t modbus_gw_req_queue;
+extern QueueHandle_t modbus_gw_rsp_queue;
 
 static uint16_t crc16(const uint8_t* data, size_t len) {
     uint16_t crc = 0xFFFF;
@@ -57,9 +59,68 @@ void ModbusTask(void* param) {
     uint8_t rx_buf[256];
 
     while (true) {
-        Cmd cmd;
-        // Block waiting for read command
-        if (xQueueReceive(cmd_queue, &cmd, portMAX_DELAY) == pdTRUE) {
+        // Create a QueueSet containing both queues for simultaneous waiting
+        QueueSetHandle_t queue_set = xQueueCreateSet(MODBUS_QUEUE_LEN + CMD_QUEUE_LEN);
+        xQueueAddToSet(cmd_queue, queue_set);
+        xQueueAddToSet(modbus_gw_req_queue, queue_set);
+
+        // Wait on either queue: cmd_queue (Upload) or modbus_gw_req_queue (Gateway)
+        QueueSetMemberHandle_t active = xQueueSelectFromSet(queue_set, portMAX_DELAY);
+
+        if (active == modbus_gw_req_queue) {
+            // === Gateway mode: TCP→RTU conversion ===
+            GwrRequest req;
+            if (xQueueReceive(modbus_gw_req_queue, &req, 0) != pdTRUE) continue;
+
+            GwrResponse rsp = {};
+            rsp.transaction_id = req.transaction_id;
+            rsp.error = false;
+
+            // Build full RTU frame: [slave_addr][pdu...][crc]
+            uint8_t rtu_buf[256];
+            rtu_buf[0] = req.slave_addr;
+            memcpy(rtu_buf + 1, req.pdu, req.pdu_len);
+            uint16_t crc = crc16(rtu_buf, 1 + req.pdu_len);
+            rtu_buf[1 + req.pdu_len] = crc & 0xFF;
+            rtu_buf[2 + req.pdu_len] = (crc >> 8) & 0xFF;
+            size_t rtu_len = 3 + req.pdu_len;
+
+            // Send RTU request
+            uart_flush_input(MODBUS_UART);
+            rs485_set_tx();
+            uart_write_bytes(MODBUS_UART, (const char*)rtu_buf, rtu_len);
+            uart_wait_tx_done(MODBUS_UART, 100);
+            rs485_set_rx();
+
+            // Wait for RTU response
+            int len = uart_read_bytes(MODBUS_UART, rx_buf, sizeof(rx_buf), pdMS_TO_TICKS(MODBUS_TIMEOUT_MS));
+
+            if (len > 5) {
+                uint16_t resp_crc = crc16(rx_buf, len - 2);
+                uint16_t got_crc = rx_buf[len - 1] | (rx_buf[len - 2] << 8);
+                if (resp_crc == got_crc) {
+                    rsp.pdu_len = len - 2 - 3; // strip slave + crc -> PDU
+                    memcpy(rsp.pdu, rx_buf + 1, rsp.pdu_len); // strip slave addr
+                    rsp.pdu_len = len - 3; // strip slave + CRC
+                } else {
+                    rsp.error = true;
+                    rsp.pdu[0] = req.pdu[0] | 0x80; // function code | 0x80
+                    rsp.pdu[1] = 0x04; // exception: slave device busy
+                    rsp.pdu_len = 2;
+                }
+            } else {
+                rsp.error = true;
+                rsp.pdu[0] = req.pdu[0] | 0x80;
+                rsp.pdu[1] = 0x04;
+                rsp.pdu_len = 2;
+            }
+
+            xQueueSend(modbus_gw_rsp_queue, &rsp, portMAX_DELAY);
+
+        } else if (active == cmd_queue) {
+            // === Upload mode: existing logic ===
+            Cmd cmd;
+            if (xQueueReceive(cmd_queue, &cmd, 0) != pdTRUE) continue;
             if (cmd != Cmd::CMD_READ_MODBUS) continue;
 
             // Build Modbus request
