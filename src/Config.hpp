@@ -64,7 +64,7 @@ public:
     // Mode
     String getProtocolSelect();  // "mqtt" | "http" | "tcp"
     void setProtocolSelect(const String& val);
-    String getRunMode();  // "push" | "pull"
+    String getRunMode();  // "push" | "pull" | "gateway"
     void setRunMode(const String& val);
     int getPushInterval();
     void setPushInterval(int val);

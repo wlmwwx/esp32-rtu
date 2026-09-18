@@ -30,6 +30,25 @@ struct ConfigData {
 extern QueueHandle_t modbus_data_queue;
 extern QueueHandle_t cmd_queue;
 
+// Gateway request (TCP→RTU): ModbusTCPGatewayTask → ModbusTask
+struct GwrRequest {
+    uint8_t slave_addr;      // Slave address (from TCP UnitID)
+    uint8_t pdu[256];        // Modbus PDU (without CRC)
+    uint8_t pdu_len;         // PDU length
+    uint16_t transaction_id; // TCP Transaction ID (echoed back)
+};
+
+extern QueueHandle_t modbus_gw_req_queue;
+extern QueueHandle_t modbus_gw_rsp_queue;
+
+// Gateway response (RTU→TCP): ModbusTask → ModbusTCPGatewayTask
+struct GwrResponse {
+    uint8_t pdu[256];        // Modbus PDU response (with function code+data, without CRC)
+    uint8_t pdu_len;         // PDU length
+    uint16_t transaction_id; // TCP Transaction ID
+    bool error;              // true=timeout/error, response already contains exception code
+};
+
 // Queue lengths
 #define MODBUS_QUEUE_LEN   5
 #define CMD_QUEUE_LEN      4

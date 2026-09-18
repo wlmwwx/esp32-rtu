@@ -14,6 +14,8 @@
 // Queue handles (defined here, extern in Queue.h)
 QueueHandle_t modbus_data_queue = nullptr;
 QueueHandle_t cmd_queue = nullptr;
+QueueHandle_t modbus_gw_req_queue = nullptr;
+QueueHandle_t modbus_gw_rsp_queue = nullptr;
 
 // Task handles
 static TaskHandle_t s_button_task_h = nullptr;
@@ -37,6 +39,8 @@ void setup() {
 
     // Create queues
     modbus_data_queue = xQueueCreate(MODBUS_QUEUE_LEN, sizeof(ModbusData));
+    modbus_gw_req_queue = xQueueCreate(4, sizeof(GwrRequest));
+    modbus_gw_rsp_queue = xQueueCreate(4, sizeof(GwrResponse));
     cmd_queue = xQueueCreate(CMD_QUEUE_LEN, sizeof(Cmd));
 
     if (!isConfigured) {
