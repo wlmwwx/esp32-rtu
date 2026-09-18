@@ -9,6 +9,7 @@
 #include "Network.hpp"
 #include "WebConfig.hpp"
 #include "StatusLED.hpp"
+#include "ModbusTCPGateway.hpp"
 #include "App.hpp"
 
 // Queue handles (defined here, extern in Queue.h)
@@ -43,7 +44,37 @@ void setup() {
     modbus_gw_rsp_queue = xQueueCreate(4, sizeof(GwrResponse));
     cmd_queue = xQueueCreate(CMD_QUEUE_LEN, sizeof(Cmd));
 
-    if (!isConfigured) {
+    String runMode = cfg.getRunMode();
+
+    if (runMode == "gateway") {
+        // Gateway 模式：WiFi STA + ModbusTCPGateway + ModbusTask + ButtonTask
+        Serial.println("Starting Gateway mode...");
+
+        WiFi.mode(WIFI_STA);
+        WiFi.begin(cfg.getWifiSsid().c_str(), cfg.getWifiPass().c_str());
+
+        int attempts = 0;
+        while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+            vTaskDelay(pdMS_TO_TICKS(500));
+            attempts++;
+        }
+
+        if (WiFi.status() != WL_CONNECTED) {
+            Serial.println("WiFi failed. Falling back to config mode...");
+            xTaskCreatePinnedToCore(WebConfigTask, "WebConfig", 8192, NULL, 1, &s_webconfig_task_h, 0);
+            while (true) { vTaskDelay(pdMS_TO_TICKS(1000)); }
+        }
+
+        Serial.print("WiFi connected: ");
+        Serial.println(WiFi.localIP());
+
+        xTaskCreatePinnedToCore(ModbusTCPGatewayTask, "MBGateway", 8192, NULL, 3, NULL, 0);
+        xTaskCreatePinnedToCore(ModbusTask, "Modbus", 4096, NULL, 3, &s_modbus_task_h, 0);
+        xTaskCreatePinnedToCore(ButtonTask, "Button", 2048, NULL, 4, &s_button_task_h, 0);
+
+        while (true) { vTaskDelay(pdMS_TO_TICKS(1000)); }
+
+    } else if (!isConfigured) {
         // No config — enter CONFIG mode (AP)
         Serial.println("No config found. Starting AP mode...");
 
