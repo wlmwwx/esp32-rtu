@@ -50,7 +50,7 @@ void setup() {
         vTaskResume(s_webconfig_task_h);
 
         // Nothing else runs in config mode — scheduler already running
-        while (true) { delay(1000); }
+        while (true) { vTaskDelay(pdMS_TO_TICKS(1000)); }
     } else {
         // Configured — enter RUN mode
         Serial.println("Config found. Starting RUN mode...");
@@ -71,7 +71,7 @@ void setup() {
             xTaskCreatePinnedToCore(WebConfigTask, "WebConfig", 8192, NULL, 1, &s_webconfig_task_h, 0);
             vTaskDelay(pdMS_TO_TICKS(500));
             vTaskResume(s_webconfig_task_h);
-            while (true) { delay(1000); }
+            while (true) { vTaskDelay(pdMS_TO_TICKS(1000)); }
         }
 
         Serial.print("WiFi connected: ");
@@ -84,7 +84,7 @@ void setup() {
         xTaskCreatePinnedToCore(AppTask, "App", 4096, NULL, 2, &s_app_task_h, 0);
 
         // Scheduler already running — just yield to loop
-        while (true) { delay(1000); }
+        while (true) { vTaskDelay(pdMS_TO_TICKS(1000)); }
     }
 }
 

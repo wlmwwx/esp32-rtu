@@ -206,6 +206,6 @@ void WebConfigTask(void* param) {
 
     // Keep alive — scheduler already running, don't suspend
     while (true) {
-        delay(1000);
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
